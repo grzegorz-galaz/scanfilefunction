@@ -11,8 +11,15 @@ public class ClamAvScanner
 
     public ClamAvScanner(IConfiguration config)
     {
-        _host = config["ClamAVHost"];
-        _port = int.Parse(config["ClamAVPort"]);
+        _host = config["CLAMAV_HOST"];
+        if (string.IsNullOrWhiteSpace(_host))
+            throw new ArgumentNullException("CLAMAV_HOST", "Environment variable CLAMAV_HOST is not set.");
+
+        var portString = config["CLAMAV_PORT"];
+        if (string.IsNullOrWhiteSpace(portString))
+            throw new ArgumentNullException("CLAMAV_PORT", "Environment variable CLAMAV_PORT is not set.");
+
+        _port = int.Parse(portString);
     }
 
     public async Task<(bool IsInfected, string RawResponse)> ScanAsync(Stream input)
