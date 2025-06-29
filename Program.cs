@@ -1,24 +1,25 @@
+// Importuje klasę, która umożliwia utworzenie aplikacji funkcji w trybie Isolated Worker
 using Microsoft.Azure.Functions.Worker;
+
+// Importuje rozszerzenia do konfiguracji aplikacji funkcji
 using Microsoft.Azure.Functions.Worker.Builder;
-using Microsoft.Extensions.Configuration;
+
+// Umożliwia korzystanie z wstrzykiwania zależności i konfiguracji usług
 using Microsoft.Extensions.DependencyInjection;
+
+// Udostępnia klasę do tworzenia i uruchamiania hosta aplikacji
 using Microsoft.Extensions.Hosting;
-using Azure.Storage.Blobs;
-using ScanFileFunction.Services;
 
 var builder = FunctionsApplication.CreateBuilder(args);
 
+// Wykonuje domyślną konfigurację dla funkcji HTTP, DI, serwera itp.
 builder.ConfigureFunctionsWebApplication();
 
 builder.Services
+    // Włącza Application Insights (telemetria, logi w Azure)
     .AddApplicationInsightsTelemetryWorkerService()
-    .ConfigureFunctionsApplicationInsights()
-    .AddSingleton<ClamAvScanner>()
-    .AddSingleton(x =>
-    {
-        var config = x.GetRequiredService<IConfiguration>();
-        var blobConnectionString = config["AzureWebJobsStorage"];
-        return new BlobServiceClient(blobConnectionString);
-    });
+    
+    // Ustawia konfigurację Application Insights dla funkcji
+    .ConfigureFunctionsApplicationInsights();
 
-builder.Build().Run();
+builder.Build().Run(); // Buduje hosta i uruchamia aplikację

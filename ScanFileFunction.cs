@@ -1,52 +1,32 @@
-using System.Text.Json;
+// Importujemy przestrzeń nazw do pracy ze zdarzeniami Event Grid
 using Azure.Messaging.EventGrid;
-using Azure.Storage.Blobs;
+
+// Importujemy atrybuty funkcji Azure Functions (w wersji isolated process)
 using Microsoft.Azure.Functions.Worker;
+
+// Importujemy loggera, który pozwala zapisywać logi (np. do Application Insights)
 using Microsoft.Extensions.Logging;
-using ScanFileFunction.Models;
-using ScanFileFunction.Services;
 
-namespace FileScanFunctions;
-
-public class ScanFileFunction
+namespace FileScanFunctions // Przestrzeń nazw projektu (może się różnić, ale trzymamy się tego schematu)
 {
-    private readonly ILogger<ScanFileFunction> _logger;
-    private readonly ClamAvScanner _scanner;
-    private readonly BlobServiceClient _blobServiceClient;
-
-    public ScanFileFunction(
-        ILogger<ScanFileFunction> logger,
-        ClamAvScanner scanner,
-        BlobServiceClient blobServiceClient)
+    // Klasa definiująca funkcję Azure Function — logikę, która będzie wywoływana po zdarzeniu z Event Grid
+    public class ScanFileFunction
     {
-        _logger = logger;
-        _scanner = scanner;
-        _blobServiceClient = blobServiceClient;
-    }
+        // Pole do przechowywania loggera przekazanego przez DI (Dependency Injection)
+        private readonly ILogger<ScanFileFunction> _logger;
 
-    [Function(nameof(ScanFileFunction))]
-    public async Task Run([EventGridTrigger] EventGridEvent cloudEvent)
-    {
-        // Krok 1: Parsowanie URL z eventu
-        var json = cloudEvent.Data.ToString();
-        var eventData = JsonDocument.Parse(json);
-        var url = eventData.RootElement.GetProperty("url").GetString();
+        // Konstruktor klasy, do którego wstrzykiwany jest logger — umożliwia logowanie zdarzeń
+        public ScanFileFunction(ILogger<ScanFileFunction> logger)
+        {
+            _logger = logger;
+        }
 
-        var uri = new Uri(url);
-        var containerName = uri.Segments[1].TrimEnd('/');
-        var fileName = Path.GetFileName(uri.LocalPath);
-
-        _logger.LogInformation("Start scanning {FileName} from container {Container}", fileName, containerName);
-
-        // Krok 2: Pobranie pliku
-        var containerClient = _blobServiceClient.GetBlobContainerClient(containerName);
-        var blobClient = containerClient.GetBlobClient(fileName);
-        var stream = await blobClient.OpenReadAsync();
-
-        // Krok 3: Skanowanie
-        var result = await _scanner.ScanAsync(stream);
-
-        _logger.LogInformation("Scan finished: {Status}  File: {FileName}",
-            result.IsInfected ? "INFECTED" : "CLEAN", fileName);
+        // Główna funkcja, która zostanie wywołana, gdy Event Grid dostarczy zdarzenie
+        [Function(nameof(ScanFileFunction))] // Atrybut określający nazwę funkcji w Azure
+        public void Run([EventGridTrigger] EventGridEvent eventGridEvent)
+        {
+            // Logujemy podstawowe informacje o odebranym zdarzeniu — typ oraz dane
+            _logger.LogInformation($"Received event: {eventGridEvent.EventType}, Data: {eventGridEvent.Data.ToString()}");
+        }
     }
 }
