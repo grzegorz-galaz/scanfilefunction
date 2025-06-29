@@ -11,8 +11,6 @@ builder.ConfigureFunctionsWebApplication();
 builder.Services
     .AddApplicationInsightsTelemetryWorkerService()
     .ConfigureFunctionsApplicationInsights()
-    .AddSingleton<ClamAvScanner>()
-    .AddSingleton<EventPublisher>();
-    
+    .AddSingleton<ClamAvScanner>();
 
 builder.Build().Run();
