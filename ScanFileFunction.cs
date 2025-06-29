@@ -7,7 +7,7 @@ using Microsoft.Azure.Functions.Worker;
 // Importujemy loggera, który pozwala zapisywać logi (np. do Application Insights)
 using Microsoft.Extensions.Logging;
 
-namespace FileScanFunctions // Przestrzeń nazw projektu (może się różnić, ale trzymamy się tego schematu)
+namespace ScanFileFunction // Przestrzeń nazw projektu (upewnij się, że jest spójna z resztą projektu)
 {
     // Klasa definiująca funkcję Azure Function — logikę, która będzie wywoływana po zdarzeniu z Event Grid
     public class ScanFileFunction
@@ -25,8 +25,12 @@ namespace FileScanFunctions // Przestrzeń nazw projektu (może się różnić, 
         [Function(nameof(ScanFileFunction))] // Atrybut określający nazwę funkcji w Azure
         public void Run([EventGridTrigger] EventGridEvent eventGridEvent)
         {
+            // Log na start działania funkcji — przydatny przy debugowaniu
+            _logger.LogInformation("🟢 ScanFileFunction was triggered.");
+
             // Logujemy podstawowe informacje o odebranym zdarzeniu — typ oraz dane
-            _logger.LogInformation($"Received event: {eventGridEvent.EventType}, Data: {eventGridEvent.Data.ToString()}");
+            _logger.LogInformation($"📦 Received event type: {eventGridEvent.EventType}");
+            _logger.LogInformation($"📄 Event data: {eventGridEvent.Data.ToString()}");
         }
     }
 }
