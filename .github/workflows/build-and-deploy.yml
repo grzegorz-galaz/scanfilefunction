@@ -25,7 +25,7 @@ jobs:
       run: dotnet build ScanFileFunction.sln --configuration Release --no-restore
 
     - name: Publish
-      run: dotnet publish ScanFileFunction/ScanFileFunction.csproj --configuration Release --output ./publish --no-build
+      run: dotnet publish ScanFileFunction.csproj --configuration Release --output ./publish --no-build
 
     - name: Deploy to Azure Function App
       uses: azure/functions-action@v1
