@@ -10,26 +10,31 @@ jobs:
     runs-on: ubuntu-latest
 
     steps:
-    - name: Checkout code
-      uses: actions/checkout@v3
+      - name: Checkout code
+        uses: actions/checkout@v3
 
-    - name: Setup .NET SDK
-      uses: actions/setup-dotnet@v3
-      with:
-        dotnet-version: '8.0.x'
+      - name: Setup .NET SDK
+        uses: actions/setup-dotnet@v3
+        with:
+          dotnet-version: '8.0.x'
 
-    - name: Restore dependencies
-      run: dotnet restore ScanFileFunction.sln
+      - name: Restore dependencies
+        run: dotnet restore ScanFileFunction.sln
 
-    - name: Build
-      run: dotnet build ScanFileFunction.sln --configuration Release --no-restore
+      - name: Build
+        run: dotnet build ScanFileFunction.sln --configuration Release --no-restore
 
-    - name: Publish
-      run: dotnet publish ScanFileFunction.csproj --configuration Release --output ./publish --no-build
+      - name: Publish
+        run: dotnet publish ScanFileFunction.csproj --configuration Release --output ./publish --no-build
 
-    - name: Deploy to Azure Function App
-      uses: azure/functions-action@v1
-      with:
-        app-name: scanfile-func
-        package: ./publish
-        publish-profile: ${{ secrets.AZUREAPPSERVICE_PUBLISHPROFILE }}
+      - name: Zip publish folder
+        run: |
+          cd publish
+          zip -r ../functionapp.zip .
+
+      - name: Deploy to Azure Function App
+        uses: azure/functions-action@v1
+        with:
+          app-name: scanfile-func
+          package: ./functionapp.zip
+          publish-profile: ${{ secrets.AZUREAPPSERVICE_PUBLISHPROFILE }}
