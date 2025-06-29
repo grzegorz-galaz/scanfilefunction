@@ -38,8 +38,8 @@ jobs:
           tenant-id: ${{ secrets.AZURE_TENANT_ID }}
           subscription-id: ${{ secrets.AZURE_SUBSCRIPTION_ID }}
 
-      - name: Deploy to Azure Function App
-        uses: azure/webapps-deploy@v2
+      - name: Deploy to Azure Function App (Flex Consumption)
+        uses: Azure/functions-action@v1
         with:
           app-name: scanfile-func
           package: ./publish
