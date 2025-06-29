@@ -1,5 +1,6 @@
 using System.Net.Sockets;
 using System.Net;
+using Microsoft.Extensions.Configuration;
 
 namespace ScanFileFunction.Services;
 

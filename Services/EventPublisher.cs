@@ -1,6 +1,8 @@
 using Azure;
 using Azure.Messaging.EventGrid;
 using ScanFileFunction.Models;
+using Microsoft.Extensions.Configuration;
+
 
 namespace ScanFileFunction.Services;
 
