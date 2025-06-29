@@ -27,14 +27,15 @@ jobs:
       - name: Publish
         run: dotnet publish ScanFileFunction.csproj --configuration Release --output ./publish --no-build
 
-      - name: Zip publish folder
-        run: |
-          cd publish
-          zip -r ../functionapp.zip .
+      - name: Azure Login
+        uses: azure/login@v1
+        with:
+          client-id: ${{ secrets.AZURE_CLIENT_ID }}
+          tenant-id: ${{ secrets.AZURE_TENANT_ID }}
+          subscription-id: ${{ secrets.AZURE_SUBSCRIPTION_ID }}
 
       - name: Deploy to Azure Function App
-        uses: azure/functions-action@v1
+        uses: azure/webapps-deploy@v2
         with:
           app-name: scanfile-func
-          package: ./functionapp.zip
-          publish-profile: ${{ secrets.AZUREAPPSERVICE_PUBLISHPROFILE }}
+          package: ./publish
