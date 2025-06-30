@@ -2,9 +2,8 @@ using Azure.Storage.Blobs;
 using Microsoft.Azure.Functions.Worker;
 using Microsoft.Extensions.Logging;
 using Azure.Messaging.EventGrid;
-using nClam;
 using System.Text.Json;
-using System.Net;
+using System.Net.Sockets;
 
 namespace ScanFileFunction
 {
@@ -53,33 +52,57 @@ namespace ScanFileFunction
 
                 ms.Position = 0;
 
-                string clamHost = Environment.GetEnvironmentVariable("ClamAV_Host") ?? "localhost";
+                string clamHost = Environment.GetEnvironmentVariable("ClamAV_Host") ?? throw new InvalidOperationException("Missing ClamAV_Host");
                 int clamPort = int.Parse(Environment.GetEnvironmentVariable("ClamAV_Port") ?? "3310");
 
-                var clam = new ClamClient(clamHost, clamPort);
-                if (!await clam.PingAsync())
-                    throw new InvalidOperationException("❌ ClamAV server unreachable");
+                string scanResult = await ScanWithClamAV(clamHost, clamPort, ms);
+                _logger.LogInformation($"🔎 Scan result: {scanResult}");
 
-                var scanResult = await clam.SendAndScanFileAsync(ms.ToArray());
-
-                switch (scanResult.Result)
+                if (scanResult.EndsWith("OK"))
                 {
-                    case ClamScanResults.Clean:
-                        _logger.LogInformation("✅ File is clean.");
-                        break;
-                    case ClamScanResults.VirusDetected:
-                        _logger.LogWarning($"🦠 Virus found: {scanResult.InfectedFiles?.FirstOrDefault()?.VirusName}");
-                        await blobClient.DeleteIfExistsAsync();
-                        break;
-                    default:
-                        _logger.LogError("⚠️ Error during scan.");
-                        break;
+                    _logger.LogInformation("✅ File is clean.");
+                }
+                else if (scanResult.Contains("FOUND"))
+                {
+                    _logger.LogWarning("🦠 Virus detected! Deleting blob.");
+                    await blobClient.DeleteIfExistsAsync();
+                }
+                else
+                {
+                    _logger.LogError($"⚠️ Unexpected scan result: {scanResult}");
                 }
             }
             catch (Exception ex)
             {
-                _logger.LogError($"❌ Error in function: {ex.Message}");
+                _logger.LogError($"❌ Error in ScanFileFunction: {ex.Message}");
             }
+        }
+
+        private async Task<string> ScanWithClamAV(string host, int port, Stream fileStream)
+        {
+            using var client = new TcpClient();
+            await client.ConnectAsync(host, port);
+
+            using var networkStream = client.GetStream();
+
+            byte[] instreamCommand = System.Text.Encoding.ASCII.GetBytes("zINSTREAM\0");
+            await networkStream.WriteAsync(instreamCommand, 0, instreamCommand.Length);
+
+            byte[] buffer = new byte[2048];
+            int bytesRead;
+            while ((bytesRead = await fileStream.ReadAsync(buffer, 0, buffer.Length)) > 0)
+            {
+                byte[] sizePrefix = BitConverter.GetBytes(System.Net.IPAddress.HostToNetworkOrder(bytesRead));
+                await networkStream.WriteAsync(sizePrefix, 0, sizePrefix.Length);
+                await networkStream.WriteAsync(buffer, 0, bytesRead);
+            }
+
+            byte[] zeroChunk = BitConverter.GetBytes(0);
+            await networkStream.WriteAsync(zeroChunk, 0, zeroChunk.Length);
+
+            using var reader = new StreamReader(networkStream);
+            string? result = await reader.ReadLineAsync();
+            return result ?? "ERROR: No response from ClamAV";
         }
     }
 }
