@@ -13,6 +13,9 @@ using Microsoft.Extensions.Hosting;
 // Udostępnia interfejs do logowania
 using Microsoft.Extensions.Logging;
 
+// 🔧 DODAJ TO:
+using Microsoft.Extensions.Configuration;
+
 var builder = FunctionsApplication.CreateBuilder(args);
 
 // (Opcjonalnie: pozwala na lokalną konfigurację poziomu logowania)
