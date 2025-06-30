@@ -1,113 +1,31 @@
 // 📦 Obsługa zdarzeń Event Grid
 using Azure.Messaging.EventGrid;
 
-// 📂 Klient do pracy z plikami w Azure Blob Storage
-using Azure.Storage.Blobs;
-
 // ⚙️ Atrybuty i wyzwalacze Azure Functions (Isolated Worker)
 using Microsoft.Azure.Functions.Worker;
 
 // 🧾 Logowanie do Application Insights lub lokalnie
 using Microsoft.Extensions.Logging;
 
-// 🌐 TCP do komunikacji z serwerem ClamAV
-using System.Net;
-using System.Net.Sockets;
-
-// 📄 Praca z JSON bez ryzyka użycia dynamic
-using System.Text.Json;
-
-namespace ScanFileFunction // ✅ Przestrzeń nazw projektu — upewnij się, że pasuje do reszty
+namespace ScanFileFunction
 {
     public class ScanFileFunction
     {
         private readonly ILogger _logger;
 
-        // Konstruktor — inicjalizacja loggera z nadaną nazwą
         public ScanFileFunction(ILoggerFactory loggerFactory)
         {
             _logger = loggerFactory.CreateLogger("ScanFileFunction");
         }
 
-        // 🔁 Główna funkcja wyzwalana przez Event Grid
         [Function(nameof(ScanFileFunction))]
         public async Task Run([EventGridTrigger] EventGridEvent eventGridEvent)
         {
-            _logger.LogInformation("🟢 ScanFileFunction was triggered.");
-            _logger.LogInformation($"📦 Received event type: {eventGridEvent.EventType}");
+            _logger.LogInformation("🟢 ScanFileFunction was triggered!");
+            _logger.LogInformation($"📦 Event type: {eventGridEvent.EventType}");
+            _logger.LogInformation($"🧾 Event data: {eventGridEvent.Data.ToString()}");
 
-            try
-            {
-                // 1️⃣ Parsowanie BinaryData do JSON i odczyt blob URL
-                var payload = eventGridEvent.Data.ToObjectFromJson<JsonElement>();
-
-                if (!payload.TryGetProperty("url", out JsonElement urlElement) || urlElement.ValueKind != JsonValueKind.String)
-                    throw new InvalidOperationException("❌ Blob URL is missing or invalid.");
-
-                string blobUrl = urlElement.GetString()!;
-                _logger.LogInformation($"🌐 Blob URL: {blobUrl}");
-
-                // 2️⃣ Parsowanie URI i wyciągnięcie kontenera i nazwy blobu
-                Uri uri = new(blobUrl);
-                string[] segments = uri.AbsolutePath.Split('/', StringSplitOptions.RemoveEmptyEntries);
-                if (segments.Length < 2)
-                {
-                    _logger.LogWarning("⚠️ Unexpected blob URL format.");
-                    return;
-                }
-
-                string containerName = segments[0];
-                string blobName = string.Join('/', segments.Skip(1));
-                _logger.LogInformation($"📄 Blob to scan: {containerName}/{blobName}");
-
-                // 3️⃣ Pobranie pliku z Azure Blob Storage
-                string blobConn = Environment.GetEnvironmentVariable("BlobStorageConnectionString");
-                if (string.IsNullOrEmpty(blobConn))
-                    throw new InvalidOperationException("BlobStorageConnectionString is not set.");
-
-                var blobClient = new BlobClient(blobConn, containerName, blobName);
-
-                using MemoryStream ms = new();
-                await blobClient.DownloadToAsync(ms);
-                ms.Position = 0;
-                _logger.LogInformation($"📥 Downloaded {ms.Length} bytes from blob.");
-
-                // 4️⃣ Połączenie z ClamAV
-                string clamavHost = Environment.GetEnvironmentVariable("ClamAV_Host") ?? "localhost";
-                int clamavPort = int.Parse(Environment.GetEnvironmentVariable("ClamAV_Port") ?? "3310");
-                _logger.LogInformation($"🔌 Connecting to ClamAV at {clamavHost}:{clamavPort}");
-
-                using TcpClient client = new(clamavHost, clamavPort);
-                using NetworkStream stream = client.GetStream();
-
-                // 5️⃣ Wysłanie nagłówka INSTREAM
-                byte[] instream = System.Text.Encoding.ASCII.GetBytes("zINSTREAM\0");
-                await stream.WriteAsync(instream);
-
-                // 6️⃣ Wysyłanie danych w paczkach 2 KB
-                byte[] buffer = new byte[2048];
-                int bytesRead;
-                while ((bytesRead = ms.Read(buffer, 0, buffer.Length)) > 0)
-                {
-                    byte[] lengthPrefix = BitConverter.GetBytes(IPAddress.HostToNetworkOrder(bytesRead));
-                    await stream.WriteAsync(lengthPrefix);
-                    await stream.WriteAsync(buffer, 0, bytesRead);
-                }
-
-                // 7️⃣ Wysłanie zakończenia (pusta paczka)
-                await stream.WriteAsync(new byte[4]);
-
-                // 8️⃣ Odczyt wyniku skanowania
-                using StreamReader reader = new(stream);
-                string result = await reader.ReadToEndAsync();
-                _logger.LogInformation($"🧪 ClamAV scan result: {result}");
-
-                // 📌 (Tu będzie: EmitEventScanCompleted(result, blobName)...)
-            }
-            catch (Exception ex)
-            {
-                _logger.LogError($"❌ Error during scan: {ex.Message}");
-            }
+            await Task.CompletedTask; // 👈 Minimalne async, żeby kompilator się nie czepiał
         }
     }
 }
