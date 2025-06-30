@@ -47,8 +47,16 @@ namespace ScanFileFunction
 
                 using var ms = new MemoryStream();
                 _logger.LogInformation("⬇️ Downloading blob...");
-                await blobClient.DownloadToAsync(ms);
-                _logger.LogInformation($"📥 Downloaded {ms.Length} bytes");
+                try
+                {
+                    await blobClient.DownloadToAsync(ms);
+                    _logger.LogInformation($"📥 Downloaded {ms.Length} bytes");
+                }
+                catch (Exception ex)
+                {
+                    _logger.LogError($"❌ Failed to download blob: {ex}");
+                    return;
+                }
                 ms.Position = 0;
 
                 string clamHost = Environment.GetEnvironmentVariable("ClamAV_Host") ?? throw new InvalidOperationException("❌ Missing ClamAV_Host");
