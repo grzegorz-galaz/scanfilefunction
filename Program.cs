@@ -1,40 +1,41 @@
-// Importuje klasę, która umożliwia utworzenie aplikacji funkcji w trybie Isolated Worker
-using Microsoft.Azure.Functions.Worker;
+// Importujemy przestrzenie nazw niezbędne do działania funkcji Azure
+using Microsoft.Azure.Functions.Worker; // Główna przestrzeń do definiowania funkcji
+using Microsoft.Azure.Functions.Worker.Builder; // Rozszerzenia do budowania aplikacji funkcji
+using Microsoft.Extensions.DependencyInjection; // Obsługa Dependency Injection
+using Microsoft.Extensions.Hosting; // Tworzenie i uruchamianie hosta aplikacji
+using Microsoft.Extensions.Logging; // System logowania
+using Microsoft.Extensions.Configuration; // Odczyt konfiguracji (np. z appsettings.json)
 
-// Importuje rozszerzenia do konfiguracji aplikacji funkcji
-using Microsoft.Azure.Functions.Worker.Builder;
+// Przestrzeń nazw zgodna z nazwą projektu
+namespace ScanFileFunction
+{
+    // Główna klasa uruchamiająca aplikację funkcji
+    public class Program
+    {
+        // Punkt wejścia do aplikacji — odpowiednik `Main()` w klasycznej aplikacji .NET
+        public static void Main(string[] args)
+        {
+            // 🔧 Tworzymy buildera aplikacji funkcji (hosta) — odpowiada za konfigurację środowiska
+            var builder = FunctionsApplication.CreateBuilder(args);
 
-// Umożliwia korzystanie z wstrzykiwania zależności i konfiguracji usług
-using Microsoft.Extensions.DependencyInjection;
+            // 🔧 (Opcjonalnie: tylko lokalnie) — umożliwia odczyt konfiguracji z appsettings.json
+            // builder.Configuration.AddJsonFile("appsettings.json", optional: true, reloadOnChange: true);
 
-// Udostępnia klasę do tworzenia i uruchamiania hosta aplikacji
-using Microsoft.Extensions.Hosting;
+            // 🔧 Domyślna konfiguracja aplikacji funkcji:
+            // rejestruje obsługę funkcji, obsługę HTTP, DI i inne rozszerzenia
+            builder.ConfigureFunctionsWebApplication();
 
-// Udostępnia interfejs do logowania
-using Microsoft.Extensions.Logging;
+            // 🔧 Rejestrujemy Application Insights (logi, metryki w Azure)
+            builder.Services
+                .AddApplicationInsightsTelemetryWorkerService() // Rejestracja telemetryki
+                .ConfigureFunctionsApplicationInsights(); // Konfiguracja AI (np. sampling, context)
 
-// Udostępnia możliwość odczytu konfiguracji (np. z appsettings.json)
-using Microsoft.Extensions.Configuration;
+            // 🔧 Tworzymy tymczasowy logger, aby potwierdzić, że host funkcji wystartował
+            var tempLogger = builder.Services.BuildServiceProvider().GetRequiredService<ILogger<Program>>();
+            tempLogger.LogInformation("🚀 Azure Function host started (Program.cs log)");
 
-// 🔧 Tworzymy buildera aplikacji funkcji
-var builder = FunctionsApplication.CreateBuilder(args);
-
-// 🔧 (Opcjonalnie, tylko lokalnie): pozwala na użycie pliku appsettings.json do konfiguracji
-// builder.Configuration.AddJsonFile("appsettings.json", optional: true, reloadOnChange: true);
-
-// 🔧 Konfigurujemy domyślne ustawienia funkcji (obsługa HTTP, DI, itp.)
-builder.ConfigureFunctionsWebApplication();
-
-builder.Services
-    // 🔧 Włączamy Application Insights — telemetria, logi w Azure
-    .AddApplicationInsightsTelemetryWorkerService()
-
-    // 🔧 Konfigurujemy ustawienia Application Insights dla funkcji
-    .ConfigureFunctionsApplicationInsights();
-
-// 🔧 Log startowy — pomocny, aby upewnić się, że host wystartował
-var tempLogger = builder.Services.BuildServiceProvider().GetRequiredService<ILogger<Program>>();
-tempLogger.LogInformation("🚀 Azure Function host started (Program.cs log)");
-
-// 🔧 Budujemy i uruchamiamy hosta aplikacji funkcji
-builder.Build().Run();
+            // 🔧 Budujemy i uruchamiamy hosta aplikacji funkcji — od tego momentu działa nasza logika
+            builder.Build().Run();
+        }
+    }
+}
