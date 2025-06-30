@@ -38,25 +38,26 @@ namespace ScanFileFunction
 
                 string container = segments[0];
                 string blobName = string.Join('/', segments.Skip(1));
-
                 _logger.LogInformation($"📄 Blob to scan: {container}/{blobName}");
 
                 string connectionString = Environment.GetEnvironmentVariable("BlobStorageConnectionString")
-                    ?? throw new InvalidOperationException("Missing BlobStorageConnectionString");
+                    ?? throw new InvalidOperationException("❌ Missing BlobStorageConnectionString");
 
                 var blobClient = new BlobClient(connectionString, container, blobName);
 
                 using var ms = new MemoryStream();
+                _logger.LogInformation("⬇️ Downloading blob...");
                 await blobClient.DownloadToAsync(ms);
                 _logger.LogInformation($"📥 Downloaded {ms.Length} bytes");
-
                 ms.Position = 0;
 
-                string clamHost = Environment.GetEnvironmentVariable("ClamAV_Host") ?? throw new InvalidOperationException("Missing ClamAV_Host");
-                int clamPort = int.Parse(Environment.GetEnvironmentVariable("ClamAV_Port") ?? "3310");
+                string clamHost = Environment.GetEnvironmentVariable("ClamAV_Host") ?? throw new InvalidOperationException("❌ Missing ClamAV_Host");
+                if (!int.TryParse(Environment.GetEnvironmentVariable("ClamAV_Port"), out int clamPort))
+                    throw new InvalidOperationException("❌ Invalid or missing ClamAV_Port");
 
+                _logger.LogInformation($"📡 Connecting to ClamAV at {clamHost}:{clamPort}...");
                 string scanResult = await ScanWithClamAV(clamHost, clamPort, ms);
-                _logger.LogInformation($"🔎 Scan result: {scanResult}");
+                _logger.LogInformation($"🔍 Scan result: {scanResult}");
 
                 if (scanResult.EndsWith("OK"))
                 {
@@ -74,7 +75,7 @@ namespace ScanFileFunction
             }
             catch (Exception ex)
             {
-                _logger.LogError($"❌ Error in ScanFileFunction: {ex.Message}");
+                _logger.LogError($"💥 Exception in ScanFileFunction: {ex}");
             }
         }
 
@@ -82,27 +83,26 @@ namespace ScanFileFunction
         {
             using var client = new TcpClient();
             await client.ConnectAsync(host, port);
-
             using var networkStream = client.GetStream();
 
             byte[] instreamCommand = System.Text.Encoding.ASCII.GetBytes("zINSTREAM\0");
-            await networkStream.WriteAsync(instreamCommand, 0, instreamCommand.Length);
+            await networkStream.WriteAsync(instreamCommand);
 
             byte[] buffer = new byte[2048];
             int bytesRead;
             while ((bytesRead = await fileStream.ReadAsync(buffer, 0, buffer.Length)) > 0)
             {
                 byte[] sizePrefix = BitConverter.GetBytes(System.Net.IPAddress.HostToNetworkOrder(bytesRead));
-                await networkStream.WriteAsync(sizePrefix, 0, sizePrefix.Length);
+                await networkStream.WriteAsync(sizePrefix, 0, 4);
                 await networkStream.WriteAsync(buffer, 0, bytesRead);
             }
 
             byte[] zeroChunk = BitConverter.GetBytes(0);
-            await networkStream.WriteAsync(zeroChunk, 0, zeroChunk.Length);
+            await networkStream.WriteAsync(zeroChunk, 0, 4);
 
             using var reader = new StreamReader(networkStream);
             string? result = await reader.ReadLineAsync();
-            return result ?? "ERROR: No response from ClamAV";
+            return result ?? "❌ ERROR: No response from ClamAV";
         }
     }
 }
