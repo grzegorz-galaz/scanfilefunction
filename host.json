@@ -3,8 +3,19 @@
   "logging": {
     "applicationInsights": {
       "samplingSettings": {
-        "isEnabled": true
+        "isEnabled": true,
+        "maxTelemetryItemsPerSecond": 5
       }
+    },
+    "logLevel": {
+      "Function": "Information",
+      "default": "Information"
+    }
+  },
+  "extensions": {
+    "eventGrid": {
+      "maxEventsPerBatch": 1,
+      "maxBatchSize": 1
     }
   }
 }
