@@ -13,26 +13,28 @@ using Microsoft.Extensions.Hosting;
 // Udostępnia interfejs do logowania
 using Microsoft.Extensions.Logging;
 
-// 🔧 DODAJ TO:
+// Udostępnia możliwość odczytu konfiguracji (np. z appsettings.json)
 using Microsoft.Extensions.Configuration;
 
+// 🔧 Tworzymy buildera aplikacji funkcji
 var builder = FunctionsApplication.CreateBuilder(args);
 
-// (Opcjonalnie: pozwala na lokalną konfigurację poziomu logowania)
-builder.Configuration.AddJsonFile("appsettings.json", optional: true, reloadOnChange: true);
+// 🔧 (Opcjonalnie, tylko lokalnie): pozwala na użycie pliku appsettings.json do konfiguracji
+// builder.Configuration.AddJsonFile("appsettings.json", optional: true, reloadOnChange: true);
 
-// Wykonuje domyślną konfigurację dla funkcji HTTP, DI, serwera itp.
+// 🔧 Konfigurujemy domyślne ustawienia funkcji (obsługa HTTP, DI, itp.)
 builder.ConfigureFunctionsWebApplication();
 
 builder.Services
-    // Włącza Application Insights (telemetria, logi w Azure)
+    // 🔧 Włączamy Application Insights — telemetria, logi w Azure
     .AddApplicationInsightsTelemetryWorkerService()
 
-    // Ustawia konfigurację Application Insights dla funkcji
+    // 🔧 Konfigurujemy ustawienia Application Insights dla funkcji
     .ConfigureFunctionsApplicationInsights();
 
-// Testowy log uruchomienia aplikacji
+// 🔧 Log startowy — pomocny, aby upewnić się, że host wystartował
 var tempLogger = builder.Services.BuildServiceProvider().GetRequiredService<ILogger<Program>>();
 tempLogger.LogInformation("🚀 Azure Function host started (Program.cs log)");
 
-builder.Build().Run(); // Buduje hosta i uruchamia aplikację
+// 🔧 Budujemy i uruchamiamy hosta aplikacji funkcji
+builder.Build().Run();
