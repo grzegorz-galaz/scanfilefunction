@@ -35,11 +35,11 @@ namespace ScanFileFunction // ✅ Przestrzeń nazw projektu — upewnij się, ż
 
             try
             {
-                // 1️⃣ Pobranie adresu URL blobu ze zdarzenia Event Grid
+                // 1️⃣ Pobranie adresu URL blobu ze zdarzenia Event Grid (bezpieczne rzutowanie)
                 dynamic data = eventGridEvent.Data;
-                string? blobUrl = data?.url;
+                string blobUrl = data?.url?.ToString() ?? string.Empty;
 
-                if (string.IsNullOrEmpty(blobUrl))
+                if (string.IsNullOrWhiteSpace(blobUrl))
                 {
                     _logger.LogWarning("⚠️ No blob URL found in event.");
                     return;
@@ -48,6 +48,12 @@ namespace ScanFileFunction // ✅ Przestrzeń nazw projektu — upewnij się, ż
                 // 2️⃣ Parsowanie URI i wyciągnięcie kontenera i nazwy blobu
                 Uri uri = new(blobUrl);
                 string[] segments = uri.AbsolutePath.Split('/', StringSplitOptions.RemoveEmptyEntries);
+                if (segments.Length < 2)
+                {
+                    _logger.LogWarning("⚠️ Unexpected blob URL format.");
+                    return;
+                }
+
                 string containerName = segments[0];
                 string blobName = string.Join('/', segments.Skip(1));
                 _logger.LogInformation($"📄 Blob to scan: {containerName}/{blobName}");
