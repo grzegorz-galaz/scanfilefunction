@@ -14,6 +14,9 @@ using Microsoft.Extensions.Logging;
 using System.Net;
 using System.Net.Sockets;
 
+// 📄 Praca z JSON bez ryzyka użycia dynamic
+using System.Text.Json;
+
 namespace ScanFileFunction // ✅ Przestrzeń nazw projektu — upewnij się, że pasuje do reszty
 {
     public class ScanFileFunction
@@ -36,8 +39,11 @@ namespace ScanFileFunction // ✅ Przestrzeń nazw projektu — upewnij się, ż
             try
             {
                 // 1️⃣ Pobranie adresu URL blobu ze zdarzenia Event Grid (typ-bezpiecznie)
-                dynamic data = eventGridEvent.Data;
-                string blobUrl = data?.url?.ToString() ?? throw new InvalidOperationException("❌ Blob URL is missing or invalid.");
+                JsonElement data = (JsonElement)eventGridEvent.Data;
+                if (!data.TryGetProperty("url", out JsonElement urlElement) || urlElement.ValueKind != JsonValueKind.String)
+                    throw new InvalidOperationException("❌ Blob URL is missing or invalid.");
+
+                string blobUrl = urlElement.GetString()!;
                 _logger.LogInformation($"🌐 Blob URL: {blobUrl}");
 
                 // 2️⃣ Parsowanie URI i wyciągnięcie kontenera i nazwy blobu
