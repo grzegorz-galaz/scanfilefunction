@@ -24,10 +24,14 @@ namespace ScanFileFunction
             try
             {
                 var payload = eventGridEvent.Data.ToObjectFromJson<JsonElement>();
+                _logger.LogInformation($"🧩 Payload raw data: {eventGridEvent.Data.ToString()}");
 
                 if (!payload.TryGetProperty("url", out JsonElement urlElement) || urlElement.ValueKind != JsonValueKind.String)
-                    throw new InvalidOperationException("❌ Blob URL missing or invalid.");
-
+                {
+                    //throw new InvalidOperationException("❌ Blob URL missing or invalid.");
+                    _logger.LogError("❌ Blob URL missing or invalid.");
+                return;
+                }
                 string blobUrl = urlElement.GetString()!;
                 _logger.LogInformation($"🌐 Blob URL: {blobUrl}");
 
