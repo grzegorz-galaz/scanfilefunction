@@ -41,8 +41,9 @@ namespace ScanFileFunction
                     throw new InvalidOperationException("❌ Invalid blob URL format.");
 
                 string container = segments[0];
-                _logger.LogInformation($"Parsed container name: {container}");
                 string blobName = string.Join('/', segments.Skip(1));
+                _logger.LogInformation($"Parsed container name: {container}");
+                _logger.LogInformation($"📝 Parsed blob name: {blobName}");
                 _logger.LogInformation($"📄 Blob to scan: {container}/{blobName}");
 
                 string connectionString = Environment.GetEnvironmentVariable("BlobStorageConnectionString")
