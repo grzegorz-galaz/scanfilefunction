@@ -19,77 +19,77 @@ namespace ScanFileFunction
         [Function("ScanFileFunction")]
         public async Task Run([EventGridTrigger] EventGridEvent eventGridEvent)
         {
-            _logger.LogInformation("🔔 ScanFileFunction triggered");
+            _logger.LogInformation("ScanFileFunction triggered");
 
             try
             {
                 var payload = eventGridEvent.Data.ToObjectFromJson<JsonElement>();
-                _logger.LogInformation($"🧩 Payload raw data: {eventGridEvent.Data.ToString()}");
+                _logger.LogInformation($"Payload raw data: {eventGridEvent.Data.ToString()}");
 
                 if (!payload.TryGetProperty("url", out JsonElement urlElement) || urlElement.ValueKind != JsonValueKind.String)
                 {
-                    //throw new InvalidOperationException("❌ Blob URL missing or invalid.");
-                    _logger.LogError("❌ Blob URL missing or invalid.");
+                    //throw new InvalidOperationException("Blob URL missing or invalid.");
+                    _logger.LogError("Blob URL missing or invalid.");
                 return;
                 }
                 string blobUrl = urlElement.GetString()!;
-                _logger.LogInformation($"🌐 Blob URL: {blobUrl}");
+                _logger.LogInformation($"Blob URL: {blobUrl}");
 
                 Uri uri = new(blobUrl);
                 var segments = uri.AbsolutePath.Split('/', StringSplitOptions.RemoveEmptyEntries);
                 if (segments.Length < 2)
-                    throw new InvalidOperationException("❌ Invalid blob URL format.");
+                    throw new InvalidOperationException("Invalid blob URL format.");
 
                 string container = segments[0];
                 string blobName = string.Join('/', segments.Skip(1));
                 _logger.LogInformation($"Parsed container name: {container}");
-                _logger.LogInformation($"📝 Parsed blob name: {blobName}");
-                _logger.LogInformation($"📄 Blob to scan: {container}/{blobName}");
+                _logger.LogInformation($"Parsed blob name: {blobName}");
+                _logger.LogInformation($"Blob to scan: {container}/{blobName}");
 
                 string connectionString = Environment.GetEnvironmentVariable("BlobStorageConnectionString")
-                    ?? throw new InvalidOperationException("❌ Missing BlobStorageConnectionString");
+                    ?? throw new InvalidOperationException("Missing BlobStorageConnectionString");
 
                 var blobClient = new BlobClient(connectionString, container, blobName);
 
                 using var ms = new MemoryStream();
-                _logger.LogInformation("⬇️ Downloading blob...");
+                _logger.LogInformation("Downloading blob...");
                 try
                 {
                     await blobClient.DownloadToAsync(ms);
-                    _logger.LogInformation($"📥 Downloaded {ms.Length} bytes");
+                    _logger.LogInformation($"Downloaded {ms.Length} bytes");
                 }
                 catch (Exception ex)
                 {
-                    _logger.LogError($"❌ Failed to download blob: {ex}");
+                    _logger.LogError($"Failed to download blob: {ex}");
                     return;
                 }
                 ms.Position = 0;
 
                 string clamHost = Environment.GetEnvironmentVariable("ClamAV_Host") ?? throw new InvalidOperationException("❌ Missing ClamAV_Host");
                 if (!int.TryParse(Environment.GetEnvironmentVariable("ClamAV_Port"), out int clamPort))
-                    throw new InvalidOperationException("❌ Invalid or missing ClamAV_Port");
+                    throw new InvalidOperationException("Invalid or missing ClamAV_Port");
 
-                _logger.LogInformation($"📡 Connecting to ClamAV at {clamHost}:{clamPort}...");
+                _logger.LogInformation($"Connecting to ClamAV at {clamHost}:{clamPort}...");
                 string scanResult = await ScanWithClamAV(clamHost, clamPort, ms);
-                _logger.LogInformation($"🔍 Scan result: {scanResult}");
+                _logger.LogInformation($"Scan result: {scanResult}");
 
                 if (scanResult.EndsWith("OK"))
                 {
-                    _logger.LogInformation("✅ File is clean.");
+                    _logger.LogInformation("File is clean.");
                 }
                 else if (scanResult.Contains("FOUND"))
                 {
-                    _logger.LogWarning("🦠 Virus detected! Deleting blob.");
+                    _logger.LogWarning("Virus detected! Deleting blob.");
                     await blobClient.DeleteIfExistsAsync();
                 }
                 else
                 {
-                    _logger.LogError($"⚠️ Unexpected scan result: {scanResult}");
+                    _logger.LogError($"Unexpected scan result: {scanResult}");
                 }
             }
             catch (Exception ex)
             {
-                _logger.LogError($"💥 Exception in ScanFileFunction: {ex}");
+                _logger.LogError($"Exception in ScanFileFunction: {ex}");
             }
         }
 
@@ -116,7 +116,7 @@ namespace ScanFileFunction
 
             using var reader = new StreamReader(networkStream);
             string? result = await reader.ReadLineAsync();
-            return result ?? "❌ ERROR: No response from ClamAV";
+            return result ?? "ERROR: No response from ClamAV";
         }
     }
 }
