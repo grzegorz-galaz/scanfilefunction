@@ -19,7 +19,7 @@ namespace ScanFileFunction
         [Function("ScanFileFunction")]
         public async Task Run([EventGridTrigger] EventGridEvent eventGridEvent)
         {
-            _logger.LogInformation("ScanFileFunction triggered");
+            _logger.LogInformation("ScanFileFunction triggered.");
 
             try
             {
@@ -47,7 +47,7 @@ namespace ScanFileFunction
                 _logger.LogInformation($"Blob to scan: {container}/{blobName}");
 
                 string connectionString = Environment.GetEnvironmentVariable("BlobStorageConnectionString")
-                    ?? throw new InvalidOperationException("Missing BlobStorageConnectionString");
+                    ?? throw new InvalidOperationException("Missing BlobStorageConnectionString.");
 
                 var blobClient = new BlobClient(connectionString, container, blobName);
 
@@ -79,7 +79,7 @@ namespace ScanFileFunction
                 }
                 else if (scanResult.Contains("FOUND"))
                 {
-                    _logger.LogWarning("Virus detected! Deleting blob.");
+                    _logger.LogWarning("Virus detected!");
                     await blobClient.DeleteIfExistsAsync();
                 }
                 else
