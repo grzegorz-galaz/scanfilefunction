@@ -38,7 +38,7 @@ namespace ScanFileFunction
                 Uri uri = new(blobUrl);
                 var segments = uri.AbsolutePath.Split('/', StringSplitOptions.RemoveEmptyEntries);
                 if (segments.Length < 2)
-                    throw new InvalidOperationException("Invalid blob URL format.");
+                    throw new InvalidOperationException("Invalid blob URL format, check it.");
 
                 string container = segments[0];
                 string blobName = string.Join('/', segments.Skip(1));
@@ -70,6 +70,7 @@ namespace ScanFileFunction
                     throw new InvalidOperationException("Invalid or missing ClamAV_Port");
 
                 _logger.LogInformation($"Connecting to ClamAV at {clamHost}:{clamPort}...");
+                
                 string scanResult = await ScanWithClamAV(clamHost, clamPort, ms);
                 _logger.LogInformation($"Scan result: {scanResult}");
 
